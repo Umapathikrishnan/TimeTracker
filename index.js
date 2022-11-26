@@ -2,7 +2,9 @@ const express = require('express'),
   app = express(),
   { engine } = require('express-handlebars'), // before 6.0.0
   port = process.env.PORT || 1024,
-  bodyParser = require('body-parser');
+  bodyParser = require('body-parser'),
+  fs = require('fs'),
+  json2xls = require('json2xls');
 
 app.use(bodyParser({ extended: false }));
 app.engine(
@@ -11,12 +13,24 @@ app.engine(
     defaultLayout: 'main',
   })
 );
+
 app.set('view engine', 'handlebars');
 app.get('/', (req, res) => res.render('form'));
 app.get('/form', (req, res) => res.render('form'));
 app.get('/thankyou', (req, res) => res.render('thankyou'));
 
-const report = [];
+const entries = [];
+const filename = 'entries.xlsx';
+// json2xls
+var convert = function () {
+  var xls = json2xls(entries);
+  fs.writeFileSync(filename, xls, 'binary', (err) => {
+    if (err) {
+      console.log('writeFileSync :', err);
+    }
+    console.log(filename + ' file is saved!');
+  });
+};
 app.post('/form_post', (req, res) => {
   // console.log(req.body);
   const updatedReq = {
@@ -28,8 +42,12 @@ app.post('/form_post', (req, res) => {
     'Start Time': `${req.body?.startTime} ${req.body?.starttime}`,
     'End Time': `${req.body?.endTime} ${req.body?.endtime}`,
   };
-  report.push(updatedReq);
-  console.log('data::', report);
+  entries.push(updatedReq);
+  if (entries.length >= 2) {
+    convert();
+    console.log('ENTRIES:', entries);
+    console.log('saved 3 entries');
+  }
   res.redirect(303, '/form');
 });
 
